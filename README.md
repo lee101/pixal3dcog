@@ -83,6 +83,15 @@ plus `seed`, `resolution`, `timings`, `gpu_seconds`.
 
 ## Speed
 
-Standard mode keeps all flow models resident (~18GB) and MoGe-2 on the GPU.
-flash-attn 2, TF32 and cuDNN autotune are on; the FlexGEMM autotune cache
-avoids re-tuning sparse GEMM kernels on every cold start.
+Measured on a RunPod RTX 4090 serverless worker (low-VRAM staging, texture
+2048), worker clock, one run each:
+
+| cascade | generate | export | total | notes |
+|---|---|---|---|---|
+| 1536 | 145 s | 34 s | 186 s | 500k triangles, ~20 MB GLB |
+| 1024 | 134 s | 22 s | 163 s | |
+
+A fresh worker spends ~200 s more before its first job (26 GB of weights from
+the Hub, then model load). Cards under 30 GB stage models per pipeline step
+(the resident cascade OOMs at 1536 on 24 GB); 48 GB cards keep everything
+resident. flash-attn 2, TF32 and cuDNN autotune are on.
