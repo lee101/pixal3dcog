@@ -7,7 +7,9 @@ serverless worker, and is the self-hosted image-to-3D backend for
 [simplexgen.com](https://simplexgen.com) and [app.nz](https://app.nz).
 
 Weights (Pixal3D, DINOv3 mirror, MoGe-2, BiRefNet, NAF) are baked into the
-image so cold workers do not download ~12GB. Everything is MIT or similarly
+image so cold workers do not download ~26GB. The build pulls them as
+sub-10GB tarballs from a public mirror (GHCR rejects larger layers); the same
+files come straight from the Hub with `scripts/fetch_weights.py`. Everything is MIT or similarly
 permissive; see `LICENSE.pixal3d` and the upstream `NOTICE`.
 
 ## Inputs

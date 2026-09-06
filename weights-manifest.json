@@ -1,0 +1,38 @@
+[
+ {
+  "name": "weights-aux.tar",
+  "bytes": 2962257920,
+  "sha256": "b965e19440b4c2db281fe21210b01cbfe29e9f08dc756e87e565b9172775e01c",
+  "members": 3
+ },
+ {
+  "name": "weights-pixal3d-0.tar",
+  "bytes": 5546997760,
+  "sha256": "6669d98d85f4b718ac4a098bbfe5ad3d88e1c89da79412a8f7288ccf3a0a53e0",
+  "members": 4
+ },
+ {
+  "name": "weights-pixal3d-1.tar",
+  "bytes": 5546772480,
+  "sha256": "295610431850e6b1244722897cf36269dde9946bb76242df5cad8c07655b384a",
+  "members": 1
+ },
+ {
+  "name": "weights-pixal3d-2.tar",
+  "bytes": 5546772480,
+  "sha256": "56ba312f37eb7de42423abc27b2837a793eaaaab6b541f9f4f989e8933456fd4",
+  "members": 1
+ },
+ {
+  "name": "weights-pixal3d-3.tar",
+  "bytes": 6308321280,
+  "sha256": "db65bbfecaa25a2cd186e37056efa64a6256a6680628cb6adca7dd3ef155f1ca",
+  "members": 2
+ },
+ {
+  "name": "weights-pixal3d-4.tar",
+  "bytes": 1096069120,
+  "sha256": "f166cfc39124ae305f8e63b20bcca1200d620204437efc4f54e22af556eea1dc",
+  "members": 10
+ }
+]
