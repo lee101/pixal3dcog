@@ -83,6 +83,24 @@ def _get_predictor():
     return _predictor
 
 
+def _recover_gpu(message):
+    """Free what a failed job left behind; if the GPU is still mostly full, let
+    RunPod replace this worker rather than fail every following job."""
+    import gc
+
+    import torch
+
+    gc.collect()
+    torch.cuda.empty_cache()
+    allocated = torch.cuda.memory_allocated() / 1024**3
+    total = torch.cuda.get_device_properties(0).total_memory / 1024**3
+    print(f"[worker] after failure: {allocated:.1f}GB of {total:.1f}GB still allocated", flush=True)
+    if "out of memory" in message.lower() and allocated > total * 0.7:
+        print("[worker] restarting worker process to clear GPU memory", flush=True)
+        _ship_log()
+        threading.Timer(2.0, lambda: os._exit(3)).start()
+
+
 def _fetch_image(inp):
     if inp.get("image_base64"):
         fd, path = tempfile.mkstemp(suffix=".png")
@@ -128,7 +146,9 @@ def handler(job):
     except Exception as exc:
         traceback.print_exc()
         _ship_log()
-        return {"error": str(exc)}
+        message = str(exc)
+        _recover_gpu(message)
+        return {"error": message}
     finally:
         try:
             os.remove(image_path)

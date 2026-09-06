@@ -180,9 +180,11 @@ class Predictor(BasePredictor):
         t0 = time.time()
         ensure_weights()
         vram = _vram_gb()
-        # Standard mode keeps all flow models resident (~18GB). Anything under
-        # 20GB (A10 24GB is fine, 16GB cards are not) falls back to low-VRAM.
-        self.low_vram = _env_flag("PIXAL3D_LOW_VRAM", vram < 20)
+        # Standard mode keeps every flow model resident (~19GB before any
+        # activations) and the 1536 cascade then exceeds a 24GB card, so
+        # anything under 30GB stages models per pipeline step (low-VRAM mode,
+        # a few seconds of PCIe traffic per job).
+        self.low_vram = _env_flag("PIXAL3D_LOW_VRAM", vram < 30)
         self.default_resolution = int(os.environ.get("PIXAL3D_DEFAULT_RESOLUTION", "1024" if self.low_vram else "1536"))
         print(f"[setup] vram={vram:.1f}GB low_vram={self.low_vram} attn={os.environ['ATTN_BACKEND']} autotune_cache={AUTOTUNE_CACHE}")
         self.pipeline = p3d.init_pipeline(os.environ.get("PIXAL3D_MODEL_PATH", p3d.MODEL_PATH), low_vram=self.low_vram)
