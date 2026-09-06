@@ -34,7 +34,8 @@ def main():
     if not api_key:
         sys.exit("RUNPOD_API_KEY is required")
     payload = {"input": {"image_url": args.image_url, "resolution": args.resolution, "texture_size": args.texture_size,
-                         "decimation_target": args.decimation_target, "seed": args.seed}}
+                         "decimation_target": args.decimation_target, "seed": args.seed},
+               "policy": {"executionTimeout": 1800000}}
     t0 = time.time()
     job = call(api_key, "POST", f"{BASE}/{args.endpoint}/run", payload)
     job_id = job["id"]
