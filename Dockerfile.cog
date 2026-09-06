@@ -1,0 +1,31 @@
+# Generated from cog.yaml with `cog debug`, made self-contained so it builds
+# with plain `docker build` (see README). Regenerate after editing cog.yaml.
+#syntax=docker/dockerfile:1.4
+FROM r8.im/cog-base:cuda12.4-python3.10-torch2.6.0
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked apt-get update -qq && apt-get install -qqy ninja-build libegl1 libgles2 libx11-6 && rm -rf /var/lib/apt/lists/*
+COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /usr/local/bin/
+ENV UV_SYSTEM_PYTHON=true
+COPY requirements.txt /tmp/requirements.txt
+ENV CFLAGS="-O3 -funroll-loops -fno-strict-aliasing -flto -S"
+RUN --mount=type=cache,target=/root/.cache/pip uv run pip install --cache-dir /root/.cache/pip -r /tmp/requirements.txt
+ENV CFLAGS=
+ENV CFLAGS="-O3 -funroll-loops -fno-strict-aliasing -flto -S"
+RUN --mount=type=cache,target=/root/.cache/uv uv pip install --no-cache cog
+ENV CFLAGS=
+RUN pip install --no-cache-dir "https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl"
+RUN pip install --no-cache-dir "https://github.com/LDYang694/Storages/releases/download/20260430/natten-0.21.0+torch2.6cu124-cp310-cp310-linux_x86_64.whl"
+RUN pip install --no-cache-dir "https://github.com/LDYang694/Storages/releases/download/20260430/utils3d-0.0.2-py3-none-any.whl"
+RUN pip install --no-cache-dir "git+https://github.com/microsoft/MoGe.git"
+RUN export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone -b v0.4.0 --depth 1 https://github.com/NVlabs/nvdiffrast.git /tmp/ext/nvdiffrast && pip install --no-cache-dir --no-build-isolation /tmp/ext/nvdiffrast && rm -rf /tmp/ext/nvdiffrast
+RUN export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone -b renderutils --depth 1 https://github.com/JeffreyXiang/nvdiffrec.git /tmp/ext/nvdiffrec && pip install --no-cache-dir --no-build-isolation /tmp/ext/nvdiffrec && rm -rf /tmp/ext/nvdiffrec
+RUN export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone --recursive --depth 1 https://github.com/JeffreyXiang/CuMesh.git /tmp/ext/CuMesh && pip install --no-cache-dir --no-build-isolation /tmp/ext/CuMesh && rm -rf /tmp/ext/CuMesh
+RUN export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone --recursive --depth 1 https://github.com/JeffreyXiang/FlexGEMM.git /tmp/ext/FlexGEMM && pip install --no-cache-dir --no-build-isolation /tmp/ext/FlexGEMM && rm -rf /tmp/ext/FlexGEMM
+RUN export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone --recursive --depth 1 https://github.com/microsoft/TRELLIS.2.git /tmp/ext/TRELLIS.2 && pip install --no-cache-dir --no-build-isolation /tmp/ext/TRELLIS.2/o-voxel && rm -rf /tmp/ext/TRELLIS.2
+RUN git clone https://github.com/TencentARC/Pixal3D.git /opt/pixal3d && cd /opt/pixal3d && git checkout ${PIXAL3D_COMMIT:-master} && rm -rf .git data_toolkit assets/hdri
+RUN mkdir -p /root/.cache/torch/hub/checkpoints && curl -L -o /root/.cache/torch/hub/checkpoints/naf_release.pth https://github.com/valeoai/NAF/releases/download/model/naf_release.pth && git clone --depth 1 https://github.com/valeoai/NAF.git /root/.cache/torch/hub/valeoai_NAF_main
+RUN pip install --no-cache-dir "huggingface_hub==0.36.0"
+WORKDIR /src
+EXPOSE 5000
+ENV COG_PREDICT_TYPE_STUB="predict.py:Predictor"
+CMD ["python", "-m", "cog.server.http"]
+COPY . /src
