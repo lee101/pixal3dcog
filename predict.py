@@ -58,6 +58,21 @@ torch.backends.cudnn.benchmark = True
 
 import inference as p3d  # noqa: E402  (from /opt/pixal3d)
 import o_voxel  # noqa: E402
+import pixal3d.pipelines.rembg as _rembg  # noqa: E402
+
+# pipeline.json names briaai/RMBG-2.0 for matting, a gated, non-commercial
+# repo. BiRefNet (MIT) is the same architecture and loads through the same
+# wrapper, so swap the model id before the pipeline instantiates it.
+REMBG_MODEL = os.environ.get("PIXAL3D_REMBG_MODEL", "ZhengPeng7/BiRefNet")
+_OrigBiRefNet = _rembg.BiRefNet
+
+
+class _BiRefNet(_OrigBiRefNet):
+    def __init__(self, model_name: str = REMBG_MODEL):
+        super().__init__(REMBG_MODEL)
+
+
+_rembg.BiRefNet = _BiRefNet
 
 GLB_ROTATION = np.array(
     [[-1, 0, 0, 0], [0, 0, -1, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=np.float64
