@@ -163,14 +163,13 @@ def predict_defaults() -> Dict[str, object]:
     """Plain default values of predict() inputs, for callers that bypass the cog server."""
     import inspect
 
-    from pydantic.fields import FieldInfo
-
     out = {}
     for name, param in inspect.signature(Predictor.predict).parameters.items():
         if name in ("self", "image"):
             continue
         default = param.default
-        if isinstance(default, FieldInfo):
+        # cog.input.FieldInfo is cog's own class (not pydantic's), so duck-type it.
+        if type(default).__name__ == "FieldInfo" and hasattr(default, "default"):
             default = default.default
         out[name] = default
     return out
