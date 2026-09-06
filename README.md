@@ -6,10 +6,12 @@ One image runs as a cog HTTP server on a dedicated GPU pod or as a RunPod
 serverless worker, and is the self-hosted image-to-3D backend for
 [simplexgen.com](https://simplexgen.com) and [app.nz](https://app.nz).
 
-Weights (Pixal3D, DINOv3 mirror, MoGe-2, BiRefNet, NAF) are baked into the
-image so cold workers do not download ~26GB. The build pulls them as
-sub-10GB tarballs from a public mirror (GHCR rejects larger layers); the same
-files come straight from the Hub with `scripts/fetch_weights.py`. Everything is MIT or similarly
+Weights (Pixal3D, DINOv3 mirror, MoGe-2, BiRefNet; ~26GB) are fetched from the
+Hub on first start rather than baked in, because GHCR rejects image layers
+over 10GB. On RunPod attach a network volume: it is mounted at
+`/runpod-volume` and the cache lands in `/runpod-volume/hf`, so only the first
+worker ever downloads. `scripts/fetch_weights.py` fills any other cache
+(`HF_HOME`) ahead of time. NAF's small checkpoint is baked. Everything is MIT or similarly
 permissive; see `LICENSE.pixal3d` and the upstream `NOTICE`.
 
 ## Inputs
@@ -36,6 +38,8 @@ Output: `glb` (file) or `glb_url` (when `S3_BUCKET` is configured), `seed`,
 - `S3_BUCKET`, `S3_ENDPOINT_URL`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`,
   `S3_PUBLIC_BASE_URL`, `S3_PREFIX`: upload results (R2, S3, MinIO). Without a
   public base the handler returns a 7-day presigned URL.
+- `PIXAL3D_HF_HOME`: where to cache weights (defaults to `/runpod-volume/hf`
+  when a RunPod volume is mounted, else the standard HF cache).
 - `PIXAL3D_LOW_VRAM=1`: stage models on demand (auto when VRAM < 20GB).
 - `ATTN_BACKEND=sdpa|flash_attn`: defaults to flash-attn 2 when importable.
 - `PIXAL3D_WARMUP=1`: run one small generation at startup to fill the
@@ -44,10 +48,15 @@ Output: `glb` (file) or `glb_url` (when `S3_BUCKET` is configured), `seed`,
 ## Build
 
 ```
-cog build -t ghcr.io/lee101/pixal3dcog:latest
+cog build -t ghcr.io/lee101/pixal3dcog:latest          # or, without cog:
+docker build --network host -f Dockerfile.cog -t ghcr.io/lee101/pixal3dcog:latest .
 docker build -f Dockerfile.sls -t ghcr.io/lee101/pixal3dcog:sls .
 docker push ghcr.io/lee101/pixal3dcog:latest && docker push ghcr.io/lee101/pixal3dcog:sls
 ```
+
+`Dockerfile.cog` is `cog debug` output made self-contained; regenerate it after
+editing `cog.yaml`. The image is about 27GB (CUDA 12.4 base, torch 2.6, the
+compiled extensions); a 72-core box builds it in ~25 minutes.
 
 Native extensions (nvdiffrast, nvdiffrec renderutils, CuMesh, FlexGEMM,
 o-voxel) are compiled for sm_80/86/89/90, so the image runs on A10, 3090,
@@ -59,7 +68,8 @@ A40, 4090, L40S, A100 and H100 workers. Blackwell needs a cu128 rebuild.
 cog predict -i image=@assets/chair.png -i resolution=1536 -i texture_size=2048
 ```
 
-RunPod serverless (`Dockerfile.sls` image, `RUNPOD_ENDPOINT_ID` set by RunPod):
+RunPod serverless (`Dockerfile.sls` image, `RUNPOD_ENDPOINT_ID` set by RunPod;
+`scripts/runpod_deploy.py` creates the template, endpoint and weight volume):
 
 ```
 POST https://api.runpod.ai/v2/<endpoint>/run
