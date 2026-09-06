@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.request
 
 GRAPHQL = "https://api.runpod.io/graphql"
@@ -103,7 +104,8 @@ def main():
     if args.create_volume_gb and not volume_id:
         volume_id = create_network_volume(api_key, args.name + "-weights", args.create_volume_gb, args.data_center)
         print("created network volume", volume_id, file=sys.stderr)
-    template_id = save_template(api_key, args.name + "-template", args.image, env, args.disk_gb, args.registry_auth_id)
+    # Template names must be unique per account, so every deploy makes a new one.
+    template_id = save_template(api_key, f"{args.name}-template-{int(time.time())}", args.image, env, args.disk_gb, args.registry_auth_id)
     endpoint_id = save_endpoint(api_key, args.name, template_id, args.gpu_ids, args.workers_max, args.idle, args.endpoint_id or None, volume_id or None)
     print(json.dumps({"template_id": template_id, "endpoint_id": endpoint_id, "network_volume_id": volume_id or None}))
 
