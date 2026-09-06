@@ -25,3 +25,11 @@ TEMPLATE_ID=$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['templa
 curl -sf -X PATCH "https://rest.runpod.io/v1/endpoints/$ENDPOINT_ID" -H "Content-Type: application/json" \
   -H "Authorization: Bearer $RUNPOD_API_KEY" -H "User-Agent: pixal3dcog/1.0" -d "{\"templateId\":\"$TEMPLATE_ID\"}" >/dev/null
 echo "endpoint $ENDPOINT_ID now on template $TEMPLATE_ID"
+# Idle workers keep the old image until they are recycled; scale to zero and back.
+WMAX="${WORKERS_MAX:-2}"
+curl -sf -X PATCH "https://rest.runpod.io/v1/endpoints/$ENDPOINT_ID" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $RUNPOD_API_KEY" -H "User-Agent: pixal3dcog/1.0" -d '{"workersMax":0}' >/dev/null
+sleep 20
+curl -sf -X PATCH "https://rest.runpod.io/v1/endpoints/$ENDPOINT_ID" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $RUNPOD_API_KEY" -H "User-Agent: pixal3dcog/1.0" -d "{\"workersMax\":$WMAX}" >/dev/null
+echo "workers recycled (max $WMAX)"

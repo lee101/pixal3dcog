@@ -134,7 +134,12 @@ def handler(job):
         return {"error": f"image fetch failed: {exc}"}
     from cog import Path
 
-    kwargs = {k: v for k, v in inp.items() if k in PREDICT_FIELDS and v is not None}
+    from predict import predict_defaults
+
+    # Calling predict() directly bypasses cog's input resolution, so unset
+    # inputs would arrive as pydantic FieldInfo objects; fill real defaults.
+    kwargs = predict_defaults()
+    kwargs.update({k: v for k, v in inp.items() if k in PREDICT_FIELDS and v is not None})
     try:
         out = predictor.predict(image=Path(image_path), **kwargs)
     except Exception as exc:

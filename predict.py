@@ -159,6 +159,23 @@ def ensure_weights():
     print(f"[weights] ready in {time.time() - t0:.1f}s at {os.environ.get('HF_HOME', '~/.cache/huggingface')}", flush=True)
 
 
+def predict_defaults() -> Dict[str, object]:
+    """Plain default values of predict() inputs, for callers that bypass the cog server."""
+    import inspect
+
+    from pydantic.fields import FieldInfo
+
+    out = {}
+    for name, param in inspect.signature(Predictor.predict).parameters.items():
+        if name in ("self", "image"):
+            continue
+        default = param.default
+        if isinstance(default, FieldInfo):
+            default = default.default
+        out[name] = default
+    return out
+
+
 class Predictor(BasePredictor):
     def setup(self):
         t0 = time.time()
@@ -186,7 +203,7 @@ class Predictor(BasePredictor):
             return
         t0 = time.time()
         try:
-            self.predict(image=Path(sample), resolution=1024, seed=1, texture_size=1024, decimation_target=100000, upload=False)
+            self.predict(image=Path(sample), **{**predict_defaults(), "resolution": 1024, "seed": 1, "texture_size": 1024, "decimation_target": 100000, "upload": False})
             print(f"[setup] warmup done in {time.time() - t0:.1f}s")
         except Exception as exc:  # warmup is best effort
             print(f"[setup] warmup failed: {exc}")
