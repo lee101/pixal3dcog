@@ -186,9 +186,11 @@ class Predictor(BasePredictor):
         self.default_resolution = int(os.environ.get("PIXAL3D_DEFAULT_RESOLUTION", "1024" if self.low_vram else "1536"))
         print(f"[setup] vram={vram:.1f}GB low_vram={self.low_vram} attn={os.environ['ATTN_BACKEND']} autotune_cache={AUTOTUNE_CACHE}")
         self.pipeline = p3d.init_pipeline(os.environ.get("PIXAL3D_MODEL_PATH", p3d.MODEL_PATH), low_vram=self.low_vram)
-        # MoGe-2 (camera estimation) is small; keep it resident unless memory is tight.
-        self.moge = p3d.load_moge_model(device="cuda" if not self.low_vram else "cpu")
-        self.moge_device = "cuda" if not self.low_vram else "cpu"
+        # MoGe-2 (camera estimation) runs for a fraction of a second per job;
+        # keep it resident only when the card has real headroom (the cascade
+        # itself already sits at ~19GB on a 24GB card).
+        self.moge_device = "cuda" if (not self.low_vram and vram >= 30) else "cpu"
+        self.moge = p3d.load_moge_model(device=self.moge_device)
         self.uploader = S3Uploader()
         self.workdir = "/tmp/pixal3d"
         os.makedirs(self.workdir, exist_ok=True)

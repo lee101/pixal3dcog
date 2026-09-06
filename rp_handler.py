@@ -37,25 +37,8 @@ PREDICT_FIELDS = {
 }
 
 
-class _Tee:
-    def __init__(self, stream, path):
-        self.stream = stream
-        self.file = open(path, "a", buffering=1)
-
-    def write(self, data):
-        self.stream.write(data)
-        self.file.write(data)
-
-    def flush(self):
-        self.stream.flush()
-        self.file.flush()
-
-    def isatty(self):
-        return False
-
-
-sys.stdout = _Tee(sys.stdout, LOG_PATH)
-sys.stderr = _Tee(sys.stderr, LOG_PATH)
+# entry.sh tees the process output into LOG_PATH at the fd level, so native
+# library messages are captured as well; nothing to wrap here.
 
 
 def _log_key():
