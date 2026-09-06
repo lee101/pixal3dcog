@@ -270,6 +270,7 @@ class Predictor(BasePredictor):
 
         t2 = time.time()
         torch.manual_seed(seed)
+        print(f"[predict] start res={resolution} tokens={max_num_tokens} vram_used={torch.cuda.memory_allocated() / 1024**3:.1f}GB", flush=True)
         mesh_list, (_, _, res) = self.pipeline.run(
             pre,
             camera_params=camera,
@@ -308,6 +309,7 @@ class Predictor(BasePredictor):
         timings["export"] = time.time() - t3
         timings["total"] = time.time() - t0
         torch.cuda.empty_cache()
+        print(f"[predict] vram peak {torch.cuda.max_memory_allocated() / 1024**3:.1f}GB reserved {torch.cuda.memory_reserved() / 1024**3:.1f}GB", flush=True)
         print(f"[predict] seed={seed} res={resolution} faces={len(glb.faces) if hasattr(glb, 'faces') else -1} timings={ {k: round(v, 1) for k, v in timings.items()} }")
 
         if upload and self.uploader.enabled:

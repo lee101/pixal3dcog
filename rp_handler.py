@@ -84,7 +84,7 @@ def _ship_log():
 
 def _log_shipper():
     while True:
-        time.sleep(20)
+        time.sleep(5)
         _ship_log()
 
 
