@@ -34,7 +34,7 @@ build:
     - "einops==0.8.1"
     - "ninja==1.11.1.4"
     - "huggingface_hub==0.36.0"
-    - "safetensors==0.5.3"
+    - "safetensors==0.8.0"  # Pixal3D checkpoints hold complex64 (C64) tensors; 0.5.x cannot parse them
     - "boto3==1.40.30"
     - "requests==2.32.4"
     - "runpod==1.7.9"
