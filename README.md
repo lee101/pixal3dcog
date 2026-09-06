@@ -59,8 +59,10 @@ editing `cog.yaml`. The image is about 27GB (CUDA 12.4 base, torch 2.6, the
 compiled extensions); a 72-core box builds it in ~25 minutes.
 
 Native extensions (nvdiffrast, nvdiffrec renderutils, CuMesh, FlexGEMM,
-o-voxel) are compiled for sm_80/86/89/90, so the image runs on A10, 3090,
-A40, 4090, L40S, A100 and H100 workers. Blackwell needs a cu128 rebuild.
+o-voxel) are compiled for sm_80/86/89/90; natten (NAF's neighborhood
+attention) is compiled for sm_89 only because its build is slow, so the
+serverless pool is RTX 4090 / L4. Widen `NATTEN_CUDA_ARCH` in cog.yaml for
+Ampere or Hopper workers. Blackwell needs a cu128 rebuild.
 
 ## Run
 

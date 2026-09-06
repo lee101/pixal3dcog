@@ -41,6 +41,8 @@ build:
   run:
     # Prebuilt wheels for torch 2.6 / cu124 / cp310.
     - pip install --no-cache-dir "https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl"
+    # Placeholder natten (Hopper-only kernels) so imports resolve; replaced by
+    # the source build for Ada at the end of the image.
     - pip install --no-cache-dir "https://github.com/LDYang694/Storages/releases/download/20260430/natten-0.21.0+torch2.6cu124-cp310-cp310-linux_x86_64.whl"
     - pip install --no-cache-dir "https://github.com/LDYang694/Storages/releases/download/20260430/utils3d-0.0.2-py3-none-any.whl"
     - pip install --no-cache-dir "git+https://github.com/microsoft/MoGe.git"
@@ -61,4 +63,9 @@ build:
     # MoGe's extras upgrade huggingface_hub to 1.x, which transformers 4.57
     # rejects. Pinned last so the weight layer above stays cached.
     - pip install --no-cache-dir "huggingface_hub==0.36.0"
+    # NAF's neighborhood attention needs natten kernels for the worker GPUs.
+    # The only prebuilt torch2.6/cu124 wheel targets Hopper ("no kernel image
+    # is available" on a 4090), so compile for sm_89 (RTX 4090 / L4), which
+    # is the serverless pool we run on. Add archs to NATTEN_CUDA_ARCH for more.
+    - export NATTEN_CUDA_ARCH="8.9" NATTEN_N_WORKERS=48 MAX_JOBS=48 && pip install --no-cache-dir --no-build-isolation --force-reinstall --no-deps natten==0.21.0
 predict: "predict.py:Predictor"

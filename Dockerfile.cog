@@ -24,6 +24,7 @@ RUN export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone --recu
 RUN git clone https://github.com/TencentARC/Pixal3D.git /opt/pixal3d && cd /opt/pixal3d && git checkout ${PIXAL3D_COMMIT:-master} && rm -rf .git data_toolkit assets/hdri
 RUN mkdir -p /root/.cache/torch/hub/checkpoints && curl -L -o /root/.cache/torch/hub/checkpoints/naf_release.pth https://github.com/valeoai/NAF/releases/download/model/naf_release.pth && git clone --depth 1 https://github.com/valeoai/NAF.git /root/.cache/torch/hub/valeoai_NAF_main
 RUN pip install --no-cache-dir "huggingface_hub==0.36.0"
+RUN export NATTEN_CUDA_ARCH="8.9" NATTEN_N_WORKERS=48 MAX_JOBS=48 && pip install --no-cache-dir --no-build-isolation --force-reinstall --no-deps natten==0.21.0
 WORKDIR /src
 EXPOSE 5000
 ENV COG_PREDICT_TYPE_STUB="predict.py:Predictor"
