@@ -54,10 +54,10 @@ build:
     - export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone --recursive --depth 1 https://github.com/microsoft/TRELLIS.2.git /tmp/ext/TRELLIS.2 && pip install --no-cache-dir --no-build-isolation /tmp/ext/TRELLIS.2/o-voxel && rm -rf /tmp/ext/TRELLIS.2
     # Pixal3D source, pinned. Imported as a package from /opt/pixal3d.
     - git clone https://github.com/TencentARC/Pixal3D.git /opt/pixal3d && cd /opt/pixal3d && git checkout ${PIXAL3D_COMMIT:-master} && rm -rf .git data_toolkit assets/hdri
-    # MoGe's extras upgrade huggingface_hub to 1.x, which transformers 4.57 rejects.
-    - pip install --no-cache-dir "huggingface_hub==0.36.0"
-    # Weights baked into the image so cold workers do not download ~12GB. The
-    # multi-view checkpoints (*_mv) are skipped; inference_mv.py is not exposed.
-    - python -c "from huggingface_hub import snapshot_download as d; d('TencentARC/Pixal3D', allow_patterns=['pipeline.json','ckpts/*'], ignore_patterns=['*_mv*']); d('camenduru/dinov3-vitl16-pretrain-lvd1689m'); d('Ruicheng/moge-2-vitl'); d('ZhengPeng7/BiRefNet')"
+    # Weights baked into the image so cold workers do not download ~12GB.
+    - python -c "from huggingface_hub import snapshot_download as d; d('TencentARC/Pixal3D', allow_patterns=['pipeline.json','ckpts/*'], ignore_patterns=['*_mv.*']); d('camenduru/dinov3-vitl16-pretrain-lvd1689m'); d('Ruicheng/moge-2-vitl'); d('ZhengPeng7/BiRefNet')"
     - mkdir -p /root/.cache/torch/hub/checkpoints && curl -L -o /root/.cache/torch/hub/checkpoints/naf_release.pth https://github.com/valeoai/NAF/releases/download/model/naf_release.pth && git clone --depth 1 https://github.com/valeoai/NAF.git /root/.cache/torch/hub/valeoai_NAF_main
+    # MoGe's extras upgrade huggingface_hub to 1.x, which transformers 4.57
+    # rejects. Pinned last so the weight layer above stays cached.
+    - pip install --no-cache-dir "huggingface_hub==0.36.0"
 predict: "predict.py:Predictor"
