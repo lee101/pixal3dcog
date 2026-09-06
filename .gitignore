@@ -1,0 +1,7 @@
+.cog/
+__pycache__/
+*.pyc
+*.glb
+*.png
+!assets/*.png
+.env

@@ -1,0 +1,60 @@
+image: "ghcr.io/lee101/pixal3dcog"
+build:
+  gpu: true
+  cuda: "12.4"
+  python_version: "3.10"
+  system_packages:
+    - "git"
+    - "build-essential"
+    - "ninja-build"
+    - "libgl1"
+    - "libglib2.0-0"
+    - "libegl1"
+    - "libgles2"
+    - "libx11-6"
+  python_packages:
+    - "--extra-index-url https://download.pytorch.org/whl/cu124"
+    - "torch==2.6.0"
+    - "torchvision==0.21.0"
+    - "pillow==12.0.0"
+    - "imageio==2.37.2"
+    - "imageio-ffmpeg==0.6.0"
+    - "tqdm==4.67.1"
+    - "easydict==1.13"
+    - "opencv-python-headless==4.12.0.88"
+    - "trimesh==4.10.1"
+    - "transformers==4.57.3"
+    - "zstandard==0.25.0"
+    - "kornia==0.8.2"
+    - "timm==1.0.22"
+    - "diffusers==0.37.1"
+    - "accelerate==1.13.0"
+    - "plyfile==1.1.3"
+    - "scipy==1.15.3"
+    - "einops==0.8.1"
+    - "ninja==1.11.1.4"
+    - "huggingface_hub==0.36.0"
+    - "safetensors==0.5.3"
+    - "boto3==1.40.30"
+    - "requests==2.32.4"
+    - "runpod==1.7.9"
+  run:
+    # Prebuilt wheels for torch 2.6 / cu124 / cp310.
+    - pip install --no-cache-dir "https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.6cxx11abiFALSE-cp310-cp310-linux_x86_64.whl"
+    - pip install --no-cache-dir "https://github.com/LDYang694/Storages/releases/download/20260430/natten-0.21.0+torch2.6cu124-cp310-cp310-linux_x86_64.whl"
+    - pip install --no-cache-dir "https://github.com/LDYang694/Storages/releases/download/20260430/utils3d-0.0.2-py3-none-any.whl"
+    - pip install --no-cache-dir "git+https://github.com/microsoft/MoGe.git"
+    # TRELLIS.2 native extensions, built for Ampere/Ada/Hopper so one image
+    # serves A10/3090/A40/4090/L40S/A100/H100 workers. cog copies the repo
+    # into /src only after these steps, so the build is inlined here.
+    - export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone -b v0.4.0 --depth 1 https://github.com/NVlabs/nvdiffrast.git /tmp/ext/nvdiffrast && pip install --no-cache-dir --no-build-isolation /tmp/ext/nvdiffrast && rm -rf /tmp/ext/nvdiffrast
+    - export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone -b renderutils --depth 1 https://github.com/JeffreyXiang/nvdiffrec.git /tmp/ext/nvdiffrec && pip install --no-cache-dir --no-build-isolation /tmp/ext/nvdiffrec && rm -rf /tmp/ext/nvdiffrec
+    - export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone --recursive --depth 1 https://github.com/JeffreyXiang/CuMesh.git /tmp/ext/CuMesh && pip install --no-cache-dir --no-build-isolation /tmp/ext/CuMesh && rm -rf /tmp/ext/CuMesh
+    - export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone --recursive --depth 1 https://github.com/JeffreyXiang/FlexGEMM.git /tmp/ext/FlexGEMM && pip install --no-cache-dir --no-build-isolation /tmp/ext/FlexGEMM && rm -rf /tmp/ext/FlexGEMM
+    - export TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0" MAX_JOBS=8 && git clone --recursive --depth 1 https://github.com/microsoft/TRELLIS.2.git /tmp/ext/TRELLIS.2 && pip install --no-cache-dir --no-build-isolation /tmp/ext/TRELLIS.2/o-voxel && rm -rf /tmp/ext/TRELLIS.2
+    # Pixal3D source, pinned. Imported as a package from /opt/pixal3d.
+    - git clone https://github.com/TencentARC/Pixal3D.git /opt/pixal3d && cd /opt/pixal3d && git checkout ${PIXAL3D_COMMIT:-master} && rm -rf .git data_toolkit assets/hdri
+    # Weights baked into the image so cold workers do not download ~12GB.
+    - python -c "from huggingface_hub import snapshot_download as d; d('TencentARC/Pixal3D', allow_patterns=['pipeline.json','ckpts/*'], ignore_patterns=['*_mv.*']); d('camenduru/dinov3-vitl16-pretrain-lvd1689m'); d('Ruicheng/moge-2-vitl'); d('ZhengPeng7/BiRefNet')"
+    - mkdir -p /root/.cache/torch/hub/checkpoints && curl -L -o /root/.cache/torch/hub/checkpoints/naf_release.pth https://github.com/valeoai/NAF/releases/download/model/naf_release.pth && git clone --depth 1 https://github.com/valeoai/NAF.git /root/.cache/torch/hub/valeoai_NAF_main
+predict: "predict.py:Predictor"
