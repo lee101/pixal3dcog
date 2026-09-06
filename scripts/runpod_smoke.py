@@ -16,7 +16,7 @@ BASE = "https://api.runpod.ai/v2"
 
 def call(api_key, method, url, body=None):
     req = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None,
-                                 headers={"Content-Type": "application/json", "Authorization": "Bearer " + api_key})
+                                 headers={"Content-Type": "application/json", "Authorization": "Bearer " + api_key, "User-Agent": "pixal3dcog/1.0"})
     with urllib.request.urlopen(req, timeout=120) as resp:
         return json.loads(resp.read().decode())
 

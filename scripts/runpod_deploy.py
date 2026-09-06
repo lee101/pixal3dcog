@@ -26,7 +26,7 @@ def gql(api_key, query, variables):
     req = urllib.request.Request(
         GRAPHQL + "?api_key=" + api_key,
         data=body,
-        headers={"Content-Type": "application/json", "Authorization": "Bearer " + api_key},
+        headers={"Content-Type": "application/json", "Authorization": "Bearer " + api_key, "User-Agent": "pixal3dcog/1.0"},
     )
     with urllib.request.urlopen(req, timeout=60) as resp:
         payload = json.loads(resp.read().decode())
