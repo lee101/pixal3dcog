@@ -9,14 +9,13 @@ the Hub instead, or to rebuild the mirror tarballs.
   HF_HOME=/models python scripts/fetch_weights.py
 """
 
+import os
+import sys
+
 from huggingface_hub import snapshot_download
 
-MODELS = [
-    ("TencentARC/Pixal3D", {"allow_patterns": ["pipeline.json", "ckpts/*"], "ignore_patterns": ["*_mv.*"]}),
-    ("camenduru/dinov3-vitl16-pretrain-lvd1689m", {}),
-    ("Ruicheng/moge-2-vitl", {}),
-    ("ZhengPeng7/BiRefNet", {}),
-]
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from weights import MODELS  # noqa: E402
 
 if __name__ == "__main__":
     for repo, kwargs in MODELS:

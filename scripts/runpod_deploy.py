@@ -51,7 +51,13 @@ def save_template(api_key, name, image, env, disk_gb, registry_auth_id):
     return data["saveTemplate"]["id"]
 
 
-def save_endpoint(api_key, name, template_id, gpu_ids, workers_max, idle, endpoint_id=None):
+def create_network_volume(api_key, name, size_gb, data_center_id):
+    data = gql(api_key, "mutation createNetworkVolume($input: CreateNetworkVolumeInput!) { createNetworkVolume(input: $input) { id dataCenterId } }",
+               {"input": {"name": name, "size": size_gb, "dataCenterId": data_center_id}})
+    return data["createNetworkVolume"]["id"]
+
+
+def save_endpoint(api_key, name, template_id, gpu_ids, workers_max, idle, endpoint_id=None, network_volume_id=None):
     inp = {
         "name": name,
         "templateId": template_id,
@@ -62,7 +68,7 @@ def save_endpoint(api_key, name, template_id, gpu_ids, workers_max, idle, endpoi
         "scalerType": "QUEUE_DELAY",
         "scalerValue": 4,
         "locations": None,
-        "networkVolumeId": None,
+        "networkVolumeId": network_volume_id or None,
     }
     if endpoint_id:
         inp["id"] = endpoint_id
@@ -81,6 +87,9 @@ def main():
     ap.add_argument("--env", action="append", default=[], help="KEY=VALUE, repeatable")
     ap.add_argument("--endpoint-id", default="")
     ap.add_argument("--registry-auth-id", default=os.environ.get("RUNPOD_REGISTRY_AUTH_ID", ""))
+    ap.add_argument("--network-volume-id", default="", help="Existing network volume (mounted at /runpod-volume) that caches weights")
+    ap.add_argument("--create-volume-gb", type=int, default=0, help="Create a network volume of this size first")
+    ap.add_argument("--data-center", default="US-TX-3", help="Data center for --create-volume-gb")
     args = ap.parse_args()
     api_key = os.environ.get("RUNPOD_API_KEY", "").strip()
     if not api_key:
@@ -90,9 +99,13 @@ def main():
         k, _, v = item.partition("=")
         if k:
             env[k] = v
+    volume_id = args.network_volume_id
+    if args.create_volume_gb and not volume_id:
+        volume_id = create_network_volume(api_key, args.name + "-weights", args.create_volume_gb, args.data_center)
+        print("created network volume", volume_id, file=sys.stderr)
     template_id = save_template(api_key, args.name + "-template", args.image, env, args.disk_gb, args.registry_auth_id)
-    endpoint_id = save_endpoint(api_key, args.name, template_id, args.gpu_ids, args.workers_max, args.idle, args.endpoint_id or None)
-    print(json.dumps({"template_id": template_id, "endpoint_id": endpoint_id}))
+    endpoint_id = save_endpoint(api_key, args.name, template_id, args.gpu_ids, args.workers_max, args.idle, args.endpoint_id or None, volume_id or None)
+    print(json.dumps({"template_id": template_id, "endpoint_id": endpoint_id, "network_volume_id": volume_id or None}))
 
 
 if __name__ == "__main__":

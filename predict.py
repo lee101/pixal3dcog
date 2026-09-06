@@ -15,8 +15,13 @@ from typing import Dict, Optional
 
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
-os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+# Weights live in the Hugging Face cache. On RunPod a network volume mounted
+# at /runpod-volume keeps them across cold starts; otherwise they are fetched
+# into the container on first start (weights.py lists the repos).
+_HF_HOME = os.environ.get("PIXAL3D_HF_HOME") or ("/runpod-volume/hf" if os.path.isdir("/runpod-volume") else "")
+if _HF_HOME:
+    os.makedirs(_HF_HOME, exist_ok=True)
+    os.environ["HF_HOME"] = _HF_HOME
 
 PIXAL3D_ROOT = os.environ.get("PIXAL3D_ROOT", "/opt/pixal3d")
 sys.path.insert(0, PIXAL3D_ROOT)
@@ -117,9 +122,32 @@ class S3Uploader:
         )
 
 
+def ensure_weights():
+    """Download the model repos unless the cache already has them, then go offline."""
+    from huggingface_hub import snapshot_download
+
+    from weights import MODELS
+
+    t0 = time.time()
+    for repo, kwargs in MODELS:
+        try:
+            snapshot_download(repo, local_files_only=True, **kwargs)
+        except Exception:
+            print(f"[weights] fetching {repo}", flush=True)
+            snapshot_download(repo, **kwargs)
+    naf = os.path.join(torch.hub.get_dir(), "checkpoints", "naf_release.pth")
+    if not os.path.exists(naf):
+        os.makedirs(os.path.dirname(naf), exist_ok=True)
+        torch.hub.download_url_to_file("https://github.com/valeoai/NAF/releases/download/model/naf_release.pth", naf)
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    print(f"[weights] ready in {time.time() - t0:.1f}s at {os.environ.get('HF_HOME', '~/.cache/huggingface')}", flush=True)
+
+
 class Predictor(BasePredictor):
     def setup(self):
         t0 = time.time()
+        ensure_weights()
         vram = _vram_gb()
         # Standard mode keeps all flow models resident (~18GB). Anything under
         # 20GB (A10 24GB is fine, 16GB cards are not) falls back to low-VRAM.
