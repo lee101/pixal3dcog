@@ -14,11 +14,19 @@ import urllib.request
 BASE = "https://api.runpod.ai/v2"
 
 
-def call(api_key, method, url, body=None):
+def call(api_key, method, url, body=None, retries=8):
     req = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Content-Type": "application/json", "Authorization": "Bearer " + api_key, "User-Agent": "pixal3dcog/1.0"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        return json.loads(resp.read().decode())
+    for attempt in range(retries):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                return json.loads(resp.read().decode())
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            # DNS blips and 5xx/409 while the endpoint updates are transient.
+            if attempt == retries - 1:
+                raise
+            print(f"retry {attempt + 1}: {exc}", file=sys.stderr, flush=True)
+            time.sleep(5 * (attempt + 1))
 
 
 def main():
